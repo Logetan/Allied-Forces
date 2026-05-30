@@ -46,13 +46,24 @@ const commands = [
 
 ].map(command => command.toJSON());
 
+const guildIds = process.env.GUILD_ID.split(',');
+
 const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 
 (async () => {
     try {
         console.log('Komutlar yükleniyor...');
-        await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commands });
-        console.log('Tüm komutlar başarıyla yüklendi!');
+        
+        // Her bir sunucu ID'si için komutları ayrı ayrı yüklüyoruz
+        for (const guildId of guildIds) {
+            await rest.put(
+                Routes.applicationGuildCommands(process.env.CLIENT_ID, guildId.trim()),
+                { body: komutListesi },
+            );
+            console.log(`Sunucu ID: ${guildId} için komutlar başarıyla yüklendi.`);
+        }
+        
+        console.log('Tüm sunucularda işlem tamamlandı!');
     } catch (error) {
         console.error(error);
     }
