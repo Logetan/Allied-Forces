@@ -1,0 +1,19 @@
+{
+  "yetkililer": [
+    "1113440002723029075"
+  ],
+  "bas_yetkililer": [
+    "1233798701982683159",
+    "1178043369008668674"
+  ],
+  "otomesajlar": {
+    "sa": "As"
+  },
+  "holderlar": [],
+  "yasakli_kullanicilar": [],
+  "yasakli_sunucular": [
+    "1502691163533082774",
+    "1471579643868876831"
+  ],
+  "log_kanal_id": "1510146130439307285"
+}
