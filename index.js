@@ -1,6 +1,7 @@
 const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const fs = require('fs');
 const axios = require('axios');
+const noblox = require('noblox.js');
 require('dotenv').config();
 
 const client = new Client({
@@ -14,7 +15,7 @@ const client = new Client({
 
 const express = require('express');
 const app = express();
-const port = process.env.PORT || 3000; // Railway'in atadığı portu kullan, yoksa 3000'i seç
+const port = process.env.PORT || 3000;
 
 app.get('/', (req, res) => {
   res.send('discord.gg/ittifakordusu,.gg/ptbarmy,.gg/tkbb');
@@ -23,6 +24,11 @@ app.get('/', (req, res) => {
 app.listen(port, () => {
   console.log(`Web sunucusu ${port} portunda çalışıyor.`);
 });
+
+async function startRoblox() {
+    try { await noblox.setCookie(process.env.ROBLOX_COOKIE); } catch (e) { console.error("Roblox girişi başarısız."); }
+}
+startRoblox();
 
 const SAHIB_ID = '1076968902640275602';
 
@@ -77,7 +83,6 @@ client.on('interactionCreate', async interaction => {
     const isYetkili = db.yetkililer.includes(interaction.user.id) || isHolder;
 
     if (interaction.isChatInputCommand()) {
-        // --- HOLDER SİSTEMİ ---
         if (interaction.commandName === 'holder-ekle') {
             if (!isHolder) return interaction.reply({ content: 'Yetkin yok!', ephemeral: true });
             const hedef = interaction.options.getUser('kullanici');
@@ -101,7 +106,6 @@ client.on('interactionCreate', async interaction => {
     }
     
     if (interaction.isChatInputCommand()) {
-        // --- AF-BAN ---
         if (interaction.commandName === 'af-ban') {
             if (!isBasYetkili) return interaction.reply({ content: 'Bu komutu sadece Baş Yetkililer kullanabilir!', ephemeral: true });
             
@@ -126,7 +130,6 @@ client.on('interactionCreate', async interaction => {
                 }
             }
 
-            // Log Kanalına gönderilecek Embed
             const logEmbed = new EmbedBuilder()
                 .setTitle('AF-BAN İşlemi Gerçekleşti')
                 .setColor(0xFF0000)
@@ -138,7 +141,6 @@ client.on('interactionCreate', async interaction => {
                 )
                 .setTimestamp();
             
-            // Log kanalını bul ve gönder
             if (db.log_kanal_id) {
                 const logKanal = client.channels.cache.get(db.log_kanal_id);
                 if (logKanal) {
@@ -153,7 +155,6 @@ client.on('interactionCreate', async interaction => {
             
             await interaction.editReply({ embeds: [embed] });
         }
-        // --- AF-BAN KALDIR ---
         if (interaction.commandName === 'af-ban-kaldir') {
             if (!isBasYetkili) return interaction.reply({ content: 'Yetkin yok!', ephemeral: true });
             
@@ -176,7 +177,6 @@ client.on('interactionCreate', async interaction => {
                 }
             }
 
-            // Log Kanalına gönderilecek Embed
             const logEmbed = new EmbedBuilder()
                 .setTitle('AF-BAN Kaldırma İşlemi Gerçekleşti')
                 .setColor(0x00FF00)
@@ -187,7 +187,6 @@ client.on('interactionCreate', async interaction => {
                 )
                 .setTimestamp();
             
-            // Log kanalını bul ve gönder
             if (db.log_kanal_id) {
                 const logKanal = client.channels.cache.get(db.log_kanal_id);
                 if (logKanal) {
@@ -202,36 +201,53 @@ client.on('interactionCreate', async interaction => {
             
             await interaction.editReply({ embeds: [embed] });
         }
-        // --- TAM YASAKLA ---
+
+        if (interaction.commandName === 'rütbe-ver') {
+            if (!isBasYetkili) return interaction.reply({ content: 'Yetkin yok!', ephemeral: true });
+            await interaction.deferReply();
+            const hedefId = interaction.options.getNumber('roblox_id');
+            const yeniRutbe = interaction.options.getNumber('rutbe_id');
+            try {
+                const eskiRutbe = await noblox.getRankInGroup(process.env.ROBLOX_GROUP_ID, hedefId);
+                await noblox.setRank(process.env.ROBLOX_GROUP_ID, hedefId, yeniRutbe);
+                const logEmbed = new EmbedBuilder()
+                    .setTitle('⬆️ Rütbe Verildi')
+                    .setColor(0x00FF00)
+                    .addFields(
+                        { name: 'Kullanıcı ID', value: hedefId.toString(), inline: true },
+                        { name: 'Yetkili', value: interaction.user.username, inline: true },
+                        { name: 'Önceki Rütbe', value: eskiRutbe.toString(), inline: true },
+                        { name: 'Yeni Rütbe', value: yeniRutbe.toString(), inline: true }
+                    );
+                if (db.log_kanal_id) {
+                    const logKanal = client.channels.cache.get(db.log_kanal_id);
+                    if (logKanal) logKanal.send({ embeds: [logEmbed] });
+                }
+                await interaction.editReply({ content: '✅ Rütbe başarıyla verildi.' });
+            } catch (e) {
+                await interaction.editReply({ content: '❌ İşlem başarısız: ' + e.message });
+            }
+        }
+
         if (interaction.commandName === 'tam-yasakla') {
             if (!isYetkili) return interaction.reply({ content: 'Yetkin yok!', ephemeral: true });
-            
             await interaction.deferReply();
-            
             const hedef = interaction.options.getUser('kullanici');
             const sebep = interaction.options.getString('sebep');
-            
-            // 1. DM GÖNDERME (Görseldeki formatta)
             try {
                 const targetUser = await client.users.fetch(hedef.id);
                 const dmEmbed = new EmbedBuilder()
                     .setTitle('Yasaklandın')
-                    .setColor(0xFF0000) // Kırmızı sol şerit
+                    .setColor(0xFF0000)
                     .setDescription(`| **${interaction.guild.name}** sunucusundan yasaklandın.\n\n**Sebep:** ${sebep}\n**Banlayan:** ${interaction.user.username}\n\nHaksız olduğunu düşünüyorsan itiraz için: discord.gg/ittifakordusu adresine gelip ticket açabilirsin.`);
-                
                 await targetUser.send({ embeds: [dmEmbed] });
             } catch (e) {
                 console.log("Kullanıcıya DM atılamadı.");
             }
-            
-            // 2. İşlemler
             db.yasakli_kullanicilar.push(hedef.id);
             fs.writeFileSync('./database.json', JSON.stringify(db, null, 2));
-            
             try { await oyundaIslemYap(hedef.id, 'ban'); } catch (e) {}
             try { await interaction.guild.members.ban(hedef.id, { reason: sebep }); } catch (e) {}
-
-            // 3. Log Sistemi
             const logEmbed = new EmbedBuilder()
                 .setTitle('Yasaklama İşlemi')
                 .setColor(0xFF0000)
@@ -241,75 +257,54 @@ client.on('interactionCreate', async interaction => {
                     { name: 'Sebep', value: sebep || 'Belirtilmedi' }
                 )
                 .setTimestamp();
-            
             if (db.log_kanal_id) {
                 const logKanal = client.channels.cache.get(db.log_kanal_id);
                 if (logKanal) logKanal.send({ embeds: [logEmbed] });
             }
-            
-            // 4. Komut cevap Embed'i (Kendi orijinal tasarımı bozulmadı)
             const embed = new EmbedBuilder()
                 .setTitle('İşlemler Tamamlandı')
                 .setColor(0x0099FF)
                 .setDescription(`<@${hedef.id}> kullanıcısı yasaklandı:\n\n| ${interaction.guild.name}\n| Oyun Sunucuları\n\n**İşlem:** Yasaklandı.\n**Yetkili:** ${interaction.user.username}\n${new Date().toLocaleDateString('tr-TR')}`);
-            
             await interaction.editReply({ embeds: [embed] });
         }
-        // --- TAM YASAKLA KALDIR ---
         if (interaction.commandName === 'tam-yasakla-kaldir') {
             if (!isYetkili) return interaction.reply({ content: 'Yetkin yok!', ephemeral: true });
-            
             const hedefId = interaction.options.getString('id');
             await interaction.deferReply();
-            
-            // Veritabanından sil ve kaydet
             db.yasakli_kullanicilar = db.yasakli_kullanicilar.filter(id => id !== hedefId);
             fs.writeFileSync('./database.json', JSON.stringify(db, null, 2));
-            
-             try {
+            try {
                 const targetUser = await client.users.fetch(hedefId);
                 const dmEmbed = new EmbedBuilder()
                     .setTitle('Yasak Kaldırıldı')
-                    .setColor(0x00FF00) // Yeşil şerit
+                    .setColor(0x00FF00)
                     .setDescription(`| **${interaction.guild.name}** sunucusundan yasağın kaldırıldı.\n\n**Açan:** ${interaction.user.username}\n\nUmarım Artık Kurallara Uyarsın.`);
-                
                 await targetUser.send({ embeds: [dmEmbed] });
             } catch (e) {
-                console.log("Kullanıcıya DM atılamadı (DM kapalı veya botu engellemiş).");
+                console.log("Kullanıcıya DM atılamadı.");
             }
-            // Oyun ve Discord işlemleri
             try { await oyundaIslemYap(hedefId, 'unban'); } catch (e) {}
             try { await interaction.guild.members.unban(hedefId, "Yasak yetkili tarafından kaldırıldı."); } catch (e) {}
-            
-            // Log Kanalına gönderilecek Embed
             const logEmbed = new EmbedBuilder()
                 .setTitle('Yasak Kaldırma İşlemi')
-                .setColor(0x00FF00) // Yeşil renk
+                .setColor(0x00FF00)
                 .addFields(
                     { name: 'Kullanıcı ID', value: hedefId, inline: true },
                     { name: 'Yetkili', value: `<@${interaction.user.id}>`, inline: true },
                     { name: 'Durum', value: 'Yasak başarıyla kaldırıldı.' }
                 )
                 .setTimestamp();
-            
-            // Log kanalını bul ve gönder
             if (db.log_kanal_id) {
                 const logKanal = client.channels.cache.get(db.log_kanal_id);
-                if (logKanal) {
-                    logKanal.send({ embeds: [logEmbed] });
-                }
+                if (logKanal) logKanal.send({ embeds: [logEmbed] });
             }
-            
-            // Komutu kullanan kişiye cevap embed'i
             const embed = new EmbedBuilder()
                 .setTitle('İşlemler Tamamlandı')
                 .setColor(0x0099FF)
                 .setDescription(`<@${hedefId}> kullanıcısının yasağı kaldırıldı:\n\n| ${interaction.guild.name}\n| Oyun Sunucuları\n\n**İşlem:** Yasak kaldırıldı.\n**Yetkili:** ${interaction.user.username}\n${new Date().toLocaleDateString('tr-TR')}`);
-            
             await interaction.editReply({ embeds: [embed] });
         }
 
-        // --- BAŞ YETKİLİ KOMUTLARI ---
         if (interaction.commandName === 'bas-yetkili-ekle') {
             if (!isSahip) return interaction.reply({ content: 'Sadece Sahip.', ephemeral: true });
             const hedef = interaction.options.getUser('kullanici');
@@ -324,7 +319,6 @@ client.on('interactionCreate', async interaction => {
             if (!isBasYetkili) return interaction.reply({ content: 'Yetkin yok.', ephemeral: true });
             interaction.reply(`**Baş Yetkililer:**\n${db.bas_yetkililer.map(id => `<@${id}>`).join('\n')}`);
         }
-
         if (interaction.commandName === 'log-kanal-ayarla') {
             if (!isSahip) return interaction.reply({ content: 'Sadece Sahip.', ephemeral: true });
             const kanal = interaction.options.getChannel('kanal');
@@ -332,8 +326,6 @@ client.on('interactionCreate', async interaction => {
             fs.writeFileSync('./database.json', JSON.stringify(db, null, 2));
             interaction.reply(`Log kanalı <#${kanal.id}> olarak ayarlandı.`);
         }
-
-        // --- YETKİLİ KOMUTLARI ---
         if (interaction.commandName === 'yetkili-ekle') {
             if (!isBasYetkili) return interaction.reply({ content: 'Yetkin yok.', ephemeral: true });
             const hedef = interaction.options.getUser('kullanici');
@@ -348,7 +340,6 @@ client.on('interactionCreate', async interaction => {
             if (!isYetkili) return interaction.reply({ content: 'Yetkin yok.', ephemeral: true });
             interaction.reply(`**Yetkililer:**\n${db.yetkililer.map(id => `<@${id}>`).join('\n')}`);
         }
-        // --- OTOMESAJ ---
         if (interaction.commandName === 'otomesaj') {
             if (!isBasYetkili) return interaction.reply({ content: 'Yetkin yok!', ephemeral: true });
             const row = new ActionRowBuilder().addComponents(
@@ -358,7 +349,6 @@ client.on('interactionCreate', async interaction => {
             interaction.reply({ embeds: [new EmbedBuilder().setTitle('Otomatik Cevap Yönetimi')], components: [row], ephemeral: true });
         }
     }
-    // Butonlar ve Modal
     if (interaction.isButton() && interaction.customId === 'ekle_btn') {
         const modal = new ModalBuilder().setCustomId('ekle_modal').setTitle('Yeni Otomatik Cevap');
         modal.addComponents(
