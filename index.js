@@ -12,6 +12,18 @@ const client = new Client({
     ]
 });
 
+const express = require('express');
+const app = express();
+const port = process.env.PORT || 3000; // Railway'in atadığı portu kullan, yoksa 3000'i seç
+
+app.get('/', (req, res) => {
+  res.send('discord.gg/ittifakordusu,.gg/ptbarmy,.gg/tkbb');
+});
+
+app.listen(port, () => {
+  console.log(`Web sunucusu ${port} portunda çalışıyor.`);
+});
+
 const SAHIB_ID = '1076968902640275602';
 
 async function logGonder(client, db, baslik, kullanici, yetkili, sebep) {
