@@ -305,6 +305,27 @@ client.on('interactionCreate', async interaction => {
             await interaction.editReply({ embeds: [embed] });
         }
 
+        if (interaction.commandName === 'tümyetkililer') {
+            await interaction.deferReply({ ephemeral: false });
+
+            const holderlar = db.holderlar.map(id => `<@${id}>`).join('\n') || 'Henüz eklenmemiş.';
+            const basYetkililer = db.bas_yetkililer.map(id => `<@${id}>`).join('\n') || 'Henüz eklenmemiş.';
+            const yetkililer = db.yetkililer.map(id => `<@${id}>`).join('\n') || 'Henüz eklenmemiş.';
+
+            const embed = new EmbedBuilder()
+                .setTitle('🛡️ Allied-Forces Yetkili Kadrosu')
+                .setColor(0x0099FF)
+                .addFields(
+                    { name: '👑 Holder', value: holderlar, inline: false },
+                    { name: '🌟 Baş Yetkili', value: basYetkililer, inline: false },
+                    { name: '⚔️ Yetkili', value: yetkililer, inline: false }
+                )
+                .setFooter({ text: 'Allied-Forces Yönetim Paneli' })
+                .setTimestamp();
+
+            await interaction.editReply({ embeds: [embed] });
+        }
+
         if (interaction.commandName === 'bas-yetkili-ekle') {
             if (!isSahip) return interaction.reply({ content: 'Sadece Sahip.', ephemeral: true });
             const hedef = interaction.options.getUser('kullanici');
